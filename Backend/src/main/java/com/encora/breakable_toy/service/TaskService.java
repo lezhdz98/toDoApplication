@@ -175,7 +175,7 @@ public class TaskService {
     }
 
     // Retrieve all tasks with sorting, filtering, and pagination
-    public Map<String, Object> getAllTasks(String sortBy, String sortOrder, int page, Boolean done, String name, Integer priority) {
+    public Map<String, Object> getAllTasks(String sortBy,  int page, Boolean done, String name, Integer priority) {
         Pages pages = getPages();
 
         if (page < 1) {
@@ -184,7 +184,8 @@ public class TaskService {
 
         List<Task> tasks;
 
-        if ("priority".equalsIgnoreCase(sortBy) && "dueDate".equalsIgnoreCase(sortOrder)) {
+        // Sort tasks based on the sortBy parameter
+        if ("both".equalsIgnoreCase(sortBy)) {
             tasks = getAllTasksSortedByPriorityAndDueDate();
         } else if ("priority".equalsIgnoreCase(sortBy)) {
             tasks = getAllTasksSortedByPriority();

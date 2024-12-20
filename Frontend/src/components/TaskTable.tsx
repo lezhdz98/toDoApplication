@@ -1,20 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { Task } from "../models/Task";
-import { getTasks } from "../services/TaskService";
 import TaskForm from "./TaskForm";
 import DeleteTask from "./DeleteTask";
 import MarkTaskStatus from "./MarkTaskStatus";
-import { DataGrid, GridColDef, GridSortModel } from "@mui/x-data-grid";
 import {
   Container,
   Paper,
   Button,
+  ButtonGroup,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
 } from "@mui/material";
+import { useTasks } from "../hooks/useTasks";
+import { usePagination } from "../hooks/usePagination";
+import { useTaskFilters } from "../hooks/useTaskFilters";
 
 // Defining the props for TaskTable component
 interface TaskTableProps {
@@ -31,101 +40,38 @@ const TaskTable: React.FC<TaskTableProps> = ({
   onTaskChange,
   searchCriteria,
 }) => {
-  // State to manage tasks, current page, total pages, dialog open state, selected task, and sort model
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [open, setOpen] = useState<boolean>(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [sortModel, setSortModel] = useState<GridSortModel>([]);
+  const { tasks, fetchTasks } = useTasks(); // Using the custom hook to access task context
+  const { currentPage, setPage, totalPages } = usePagination(); // Using the custom hook to access pagination context
+  const { filters, setFilters } = useTaskFilters(); // Using the custom hook to access filters context
+  const [openDialog, setOpenDialog] = useState(false); // State to manage dialog open/close
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null); // State to manage selected task
 
-  // Function to fetch tasks from the server
-  const fetchTasks = async (
-    page: number,
-    sortBy?: string[],
-    sortOrder?: string[]
-  ) => {
-    try {
-      const response = await getTasks(
-        sortBy,
-        sortOrder,
-        page,
-        searchCriteria.done === "" ? undefined : searchCriteria.done === "true",
-        searchCriteria.name,
-        searchCriteria.priority === ""
-          ? undefined
-          : parseInt(searchCriteria.priority)
-      );
-      const {
-        tasks,
-        currentPage: fetchedPage,
-        totalPages: fetchedTotalPages,
-      } = response;
-      setTasks(tasks || []);
-      setCurrentPage(fetchedPage);
-      setTotalPages(fetchedTotalPages);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-      setTasks([]);
-    }
-  };
-
-  // Fetch tasks when the component mounts or when currentPage, searchCriteria, or sortModel changes
+  // Effect to update filters when search criteria change
   useEffect(() => {
-    const sortBy = sortModel.map((model) => model.field);
-    const sortOrder = sortModel
-      .map((model) => model.sort)
-      .filter((sort) => sort !== null) as string[];
-    fetchTasks(currentPage, sortBy, sortOrder);
-  }, [currentPage, searchCriteria, sortModel]);
+    setFilters({
+      ...searchCriteria,
+      priority: searchCriteria.priority
+        ? parseInt(searchCriteria.priority)
+        : undefined,
+      done: searchCriteria.done ? searchCriteria.done === "true" : undefined,
+    });
+  }, [searchCriteria, setFilters]);
 
-  // Function to handle task save action
-  const handleTaskSaved = () => {
-    fetchTasks(currentPage);
-    setOpen(false);
-    onTaskChange();
+  // Function to handle dialog open
+  const handleOpenDialog = (task: Task | null = null) => {
+    setSelectedTask(task);
+    setOpenDialog(true);
   };
 
-  // Function to handle task delete action
-  const handleTaskDeleted = () => {
-    fetchTasks(currentPage);
-    onTaskChange();
-  };
-
-  // Function to handle task status change action
-  const handleStatusChanged = () => {
-    fetchTasks(currentPage);
-    onTaskChange();
-  };
-
-  // Function to handle previous page action
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  // Function to handle next page action
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  // Function to open the dialog for creating or updating a task
-  const handleClickOpen = (task?: Task) => {
-    setSelectedTask(task || null);
-    setOpen(true);
-  };
-
-  // Function to close the dialog
-  const handleClose = () => {
-    setOpen(false);
+  // Function to handle dialog close
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
     setSelectedTask(null);
+    onTaskChange();
   };
 
   // Function to get the label for task priority
-  const getPriorityLabel = (priority: number): string => {
+  const getPriorityLabel = (priority?: number): string => {
     switch (priority) {
       case 0:
         return "Low";
@@ -147,107 +93,156 @@ const TaskTable: React.FC<TaskTableProps> = ({
     });
   };
 
-  // Defining the columns for the DataGrid
-  const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 70 },
-    { field: "name", headerName: "Name", width: 200 },
-    {
-      field: "priority",
-      headerName: "Priority",
-      width: 130,
-      renderCell: (params) => getPriorityLabel(params.value),
-    },
-    {
-      field: "dueDate",
-      headerName: "Due Date",
-      width: 150,
-      renderCell: (params) => formatDate(params.value),
-    },
-    {
-      field: "done",
-      headerName: "Status",
-      width: 130,
-      renderCell: (params) => (params.value ? "Completed" : "Pending"),
-    },
-    {
-      field: "actions",
-      headerName: "Actions",
-      width: 300,
-      renderCell: (params) => (
-        <>
-          <MarkTaskStatus
-            taskId={params.row.id}
-            done={params.row.done}
-            onStatusChanged={handleStatusChanged}
-          />
-          <button onClick={() => handleClickOpen(params.row)}>Update</button>
-          <DeleteTask
-            taskId={params.row.id}
-            onTaskDeleted={handleTaskDeleted}
-          />
-        </>
-      ),
-    },
-  ];
+  // Function to handle previous page button click
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setPage(currentPage - 1);
+    }
+  };
+
+  // Function to handle next page button click
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setPage(currentPage + 1);
+    }
+  };
+
+  // Function to handle sorting
+  const handleSort = (sortBy: string) => {
+    setFilters({ ...filters, sortBy });
+    fetchTasks();
+  };
+
+  // Function to clear sorting
+  const handleClearSort = () => {
+    setFilters({ ...filters, sortBy: undefined });
+    fetchTasks();
+  };
+
+  // Function to get the background color based on the due date
+  const getRowBackgroundColor = (dueDate?: string | null): string => {
+    if (!dueDate) return "";
+    const today = new Date();
+    const due = new Date(dueDate);
+    const diffTime = Math.abs(due.getTime() - today.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 7) return "red";
+    if (diffDays <= 14) return "yellow";
+    return "#4cbb17";
+  };
 
   return (
     <Container>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => handleClickOpen()}
-      >
-        Create Task
-      </Button>
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>
-          {selectedTask ? "Update Task" : "Create Task"}
-        </DialogTitle>
-        <DialogContent>
-          <TaskForm task={selectedTask} onTaskSaved={handleTaskSaved} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Cancel
+      <Paper>
+        {/* Top section with Create Task button and sort buttons */}
+        <Box
+          sx={{ display: "flex", justifyContent: "space-between", padding: 2 }}
+        >
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleOpenDialog()}
+          >
+            Create Task
           </Button>
-        </DialogActions>
-      </Dialog>
-      <Paper sx={{ height: 640, width: "100%", marginTop: 2 }}>
-        <DataGrid
-          rows={tasks}
-          columns={columns}
-          pageSizeOptions={[10]}
-          sortModel={sortModel}
-          onSortModelChange={(model) => setSortModel(model)}
-        />
-      </Paper>
-      <Container
-        sx={{
-          padding: 1,
-          display: "flex",
-          justifyContent: "center",
-          alignContent: "center",
-        }}
-      >
-        <Box sx={{ marginRight: "15px" }}>
-          <button onClick={handlePreviousPage} disabled={currentPage === 1}>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Typography variant="h6">Sort By:</Typography>
+
+            <ButtonGroup variant="outlined" size="small">
+              <Button onClick={() => handleSort("both")}>
+                Priority and Due Date
+              </Button>
+              <Button onClick={() => handleSort("priority")}>Priority</Button>
+              <Button onClick={() => handleSort("dueDate")}>Due Date</Button>
+              <Button variant="contained" onClick={handleClearSort}>
+                Clear Sort
+              </Button>
+            </ButtonGroup>
+          </Box>
+        </Box>
+        {/* Task Table */}
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Priority</TableCell>
+                <TableCell>Due Date</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Actions</TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {tasks.map((task) => (
+                <TableRow
+                  key={task.id}
+                  sx={{
+                    backgroundColor: getRowBackgroundColor(task.dueDate),
+                    textDecoration: task.done ? "line-through" : "none",
+                  }}
+                >
+                  <TableCell>{task.id}</TableCell>
+                  <TableCell>{task.name}</TableCell>
+                  <TableCell>{getPriorityLabel(task.priority)}</TableCell>
+                  <TableCell>
+                    {task.dueDate ? formatDate(task.dueDate) : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    <MarkTaskStatus
+                      taskId={task.id}
+                      done={task.done}
+                      onStatusChanged={fetchTasks}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleOpenDialog(task)}
+                    >
+                      Edit
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <DeleteTask taskId={task.id} onTaskDeleted={fetchTasks} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {/* Pagination Buttons */}
+        <Box sx={{ display: "flex", justifyContent: "center", padding: 2 }}>
+          <Button onClick={handlePreviousPage} disabled={currentPage === 1}>
             Previous
-          </button>
-        </Box>
-        <Box sx={{ marginRight: "15px", paddingTop: "10px" }}>
-          <strong>
-            Page {currentPage} of {totalPages}
-          </strong>
-        </Box>
-        <Box>
-          <button
+          </Button>
+          <Box sx={{ margin: "0 15px", paddingTop: "10px" }}>
+            <strong>
+              Page {currentPage} of {totalPages}
+            </strong>
+          </Box>
+          <Button
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
           >
             Next
-          </button>
+          </Button>
         </Box>
-      </Container>
+      </Paper>
+      {/* Dialog for creating/updating a task */}
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>
+          {selectedTask ? "Update Task" : "Create Task"}
+        </DialogTitle>
+        <DialogContent>
+          <TaskForm task={selectedTask} onTaskSaved={handleCloseDialog} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

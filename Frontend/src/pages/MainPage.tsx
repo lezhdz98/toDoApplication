@@ -4,6 +4,9 @@ import SearchTask from "../components/SearchTask";
 import AverageTime from "../components/AverageTime";
 import TaskTable from "../components/TaskTable";
 import { TaskProvider } from "../context/TaskContext";
+import { TaskFilterProvider } from "../context/TaskFilterContext";
+import { PaginationProvider } from "../context/PaginationContext";
+import { AverageTimeProvider } from "../context/AverageTimeContext";
 
 // Defining the MainPage component
 const MainPage: React.FC = () => {
@@ -25,41 +28,47 @@ const MainPage: React.FC = () => {
   };
 
   return (
-    // Providing the TaskContext to all child components
-    <TaskProvider>
-      <Container sx={{ bgcolor: "#242424", padding: 5 }}>
-        <Container sx={{ bgcolor: "#393939", padding: 3 }}>
-          <Typography variant="h3">
-            <strong>Breakable Toy: To Do App</strong>
-          </Typography>
-        </Container>
-        {/* SearchTask component for searching tasks */}
-        <SearchTask onSearch={handleSearch} />
+    // Providing the contexts to all child components
+    <AverageTimeProvider>
+      <TaskFilterProvider>
+        <PaginationProvider>
+          <TaskProvider>
+            <Container sx={{ bgcolor: "#242424", padding: 5 }}>
+              <Container sx={{ bgcolor: "#393939", padding: 3 }}>
+                <Typography variant="h3">
+                  <strong>Breakable Toy: To Do App</strong>
+                </Typography>
+              </Container>
+              {/* SearchTask component for searching tasks */}
+              <SearchTask onSearch={handleSearch} />
 
-        <Container sx={{ bgcolor: "#393939", padding: 3, marginTop: 3 }}>
-          <Typography variant="h4" sx={{ marginBottom: 2 }}>
-            <strong>Task Table</strong>
-          </Typography>
-          {/* TaskTable component for displaying tasks */}
-          <TaskTable
-            onTaskChange={handleTaskChange}
-            searchCriteria={searchCriteria}
-          />
-        </Container>
-        {/* AverageTime component for displaying average time to complete tasks */}
-        <AverageTime />
-        <Typography
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignContent: "center",
-            padding: 3,
-          }}
-        >
-          Francisco Rafael Lezama Hernandez - Spark Program 2024 - Demo
-        </Typography>
-      </Container>
-    </TaskProvider>
+              <Container sx={{ bgcolor: "#393939", padding: 3, marginTop: 3 }}>
+                <Typography variant="h4" sx={{ marginBottom: 2 }}>
+                  <strong>Task Table</strong>
+                </Typography>
+                {/* TaskTable component for displaying tasks */}
+                <TaskTable
+                  onTaskChange={handleTaskChange}
+                  searchCriteria={searchCriteria}
+                />
+              </Container>
+              {/* AverageTime component for displaying average time to complete tasks */}
+              <AverageTime />
+              <Typography
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignContent: "center",
+                  padding: 3,
+                }}
+              >
+                Francisco Rafael Lezama Hernandez - Spark Program 2024 - Demo
+              </Typography>
+            </Container>
+          </TaskProvider>
+        </PaginationProvider>
+      </TaskFilterProvider>
+    </AverageTimeProvider>
   );
 };
 

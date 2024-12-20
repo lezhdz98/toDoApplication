@@ -1,70 +1,79 @@
 import React, { useEffect } from "react";
-import { Box, Container, Typography } from "@mui/material";
-import { useTasks } from "../context/TaskContext";
+import { Container, Box, Typography, Card, CardContent } from "@mui/material";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import { useAverageTime } from "../hooks/useAverageTime";
 
-// Defining the AverageTime component
+// Using the custom hook to access average time context
 const AverageTime: React.FC = () => {
-  // Using the custom hook to access tasks context
-  const { averageTime, updateAverageTime } = useTasks();
+  const { averageTime, fetchAverageTime } = useAverageTime();
 
-  // Effect to update average time when the component mounts
+  // Effect to fetch average time when the component mounts
   useEffect(() => {
-    updateAverageTime();
-  }, [updateAverageTime]);
+    if (averageTime.totalTime === 0) {
+      fetchAverageTime();
+    }
+  }, [averageTime.totalTime, fetchAverageTime]);
 
   return (
-    <Container sx={{ bgcolor: "#1185cd" }}>
-      <Container sx={{ display: "flex", padding: 1 }}>
-        <Box sx={{ marginRight: "5px" }}>
-          <Typography variant="h6">
-            <strong>Average Time To Finish Task:</strong>
-          </Typography>
-        </Box>
-        <Box>
-          <Typography variant="h6">
-            <strong>{averageTime.totalTime} minutes</strong>
-          </Typography>
-        </Box>
-      </Container>
-      <Container sx={{ display: "flex", padding: 1 }}>
-        <Box>
-          <Typography variant="h6">
+    <Container sx={{ bgcolor: "#202020", padding: 2 }}>
+      <Card sx={{ marginBottom: 2 }}>
+        <CardContent>
+          <Box display="flex" alignItems="center" gap={2}>
+            <AccessTimeIcon fontSize="large" color="primary" />
+            <Box>
+              <Typography variant="h5" component="div">
+                <strong>Average Time To Finish Task:</strong>
+              </Typography>
+              <Typography variant="h6" color="textSecondary">
+                {averageTime.totalTime} minutes
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <Typography variant="h5" component="div" gutterBottom>
             <strong>Average Time To Finish Task By Priority:</strong>
           </Typography>
-        </Box>
-      </Container>
-      <Container sx={{ display: "flex", paddingBottom: 1 }}>
-        <Box sx={{ marginRight: "5px" }}>
-          <Typography variant="h6">
-            <strong>High:</strong>
-          </Typography>
-        </Box>
-        <Box sx={{ marginRight: "15px" }}>
-          <Typography variant="h6">
-            <strong>{averageTime.highTime} minutes</strong>
-          </Typography>
-        </Box>
-        <Box sx={{ marginRight: "5px" }}>
-          <Typography variant="h6">
-            <strong>Medium:</strong>
-          </Typography>
-        </Box>
-        <Box sx={{ marginRight: "15px" }}>
-          <Typography variant="h6">
-            <strong>{averageTime.mediumTime} minutes</strong>
-          </Typography>
-        </Box>
-        <Box sx={{ marginRight: "5px" }}>
-          <Typography variant="h6">
-            <strong>Low:</strong>
-          </Typography>
-        </Box>
-        <Box sx={{ marginRight: "15px" }}>
-          <Typography variant="h6">
-            <strong>{averageTime.lowTime} minutes</strong>
-          </Typography>
-        </Box>
-      </Container>
+          <Box
+            display="grid"
+            gridTemplateColumns="repeat(auto-fill, minmax(200px, 1fr))"
+            gap={2}
+          >
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" component="div">
+                  Priority High
+                </Typography>
+                <Typography variant="body1" color="textSecondary">
+                  {averageTime.highTime} minutes
+                </Typography>
+              </CardContent>
+            </Card>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" component="div">
+                  Priority Medium
+                </Typography>
+                <Typography variant="body1" color="textSecondary">
+                  {averageTime.mediumTime} minutes
+                </Typography>
+              </CardContent>
+            </Card>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" component="div">
+                  Priority Low
+                </Typography>
+                <Typography variant="body1" color="textSecondary">
+                  {averageTime.lowTime} minutes
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
+        </CardContent>
+      </Card>
     </Container>
   );
 };

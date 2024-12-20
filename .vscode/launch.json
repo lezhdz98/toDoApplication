@@ -1,0 +1,14 @@
+{
+  
+    "configurations": [
+      {
+        "name": "Edge",
+        "type": "pwa-msedge",
+        "request": "launch",
+        "url": "http://localhost:8080",
+        "webRoot": "${workspaceFolder}/src",
+        "sourceMaps": true,
+        "trace": true
+      }
+    ]
+  }

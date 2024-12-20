@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Box,
   Button,
-  Container,
   FormControl,
   InputLabel,
   MenuItem,
@@ -11,6 +10,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useTaskFilters } from "../hooks/useTaskFilters";
 
 // Defining the props for SearchTask component
 interface SearchTaskProps {
@@ -19,108 +19,88 @@ interface SearchTaskProps {
 
 // Defining the SearchTask component
 const SearchTask: React.FC<SearchTaskProps> = ({ onSearch }) => {
-  // State to manage search criteria
-  const [name, setName] = useState("");
-  const [priority, setPriority] = useState<string>("");
-  const [done, setDone] = useState<string>("");
+  // Using the custom hook to access filters context
+  const { filters, setFilters } = useTaskFilters();
 
   // Handlers for input changes
   const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setName(event.target.value);
+    setFilters({ ...filters, name: event.target.value });
   };
 
   const handlePriorityChange = (event: SelectChangeEvent<string>) => {
-    setPriority(event.target.value as string);
+    const priorityValue = event.target.value;
+    setFilters({
+      ...filters,
+      priority: priorityValue ? parseInt(priorityValue) : undefined,
+    });
   };
 
   const handleDoneChange = (event: SelectChangeEvent<string>) => {
-    setDone(event.target.value as string);
-  };
-
-  // Handler for search button click
-  const handleSearch = () => {
-    onSearch(name, priority, done);
+    const doneValue = event.target.value;
+    setFilters({
+      ...filters,
+      done: doneValue ? doneValue === "true" : undefined,
+    });
   };
 
   // Handler for clear button click
   const handleClear = () => {
-    setName("");
-    setPriority("");
-    setDone("");
-    onSearch("", "", ""); // Call onSearch with empty values to show all tasks
+    setFilters({ name: "", priority: undefined, done: undefined });
+    onSearch("", "", "");
   };
 
   return (
-    <>
-      <Container sx={{ display: "flex", bgcolor: "#202020", padding: 1 }}>
-        <Typography variant="h4">
-          <strong>Search Task</strong>
-        </Typography>
-      </Container>
-      <Container
-        sx={{ display: "flex", height: "8vh", bgcolor: "#dedede", padding: 1 }}
+    <Box sx={{ bgcolor: "#202020", padding: 2, borderRadius: 1, boxShadow: 1 }}>
+      <Typography variant="h4" gutterBottom>
+        <strong>Search Tasks</strong>
+      </Typography>
+      <Box
+        display="flex"
+        justifyContent={"space-between"}
+        flexDirection="row"
+        gap={1}
+        bgcolor="#ffffff"
+        p={2}
+        borderRadius={1}
       >
-        <Box sx={{ minWidth: 250, marginRight: "15px" }}>
-          <TextField
-            id="outlined-basic"
-            label="Name"
-            variant="outlined"
-            value={name}
-            onChange={handleNameChange}
-            fullWidth
-          />
-        </Box>
-        <Box sx={{ minWidth: 150, marginRight: "15px" }}>
-          <FormControl fullWidth>
-            <InputLabel id="priority-select-label">Priority</InputLabel>
-            <Select
-              labelId="priority-select-label"
-              id="priority-select"
-              value={priority}
-              onChange={handlePriorityChange}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="0">Low</MenuItem>
-              <MenuItem value="1">Medium</MenuItem>
-              <MenuItem value="2">High</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-        <Box sx={{ minWidth: 150, marginRight: "15px" }}>
-          <FormControl fullWidth>
-            <InputLabel id="done-select-label">State</InputLabel>
-            <Select
-              labelId="done-select-label"
-              id="done-select"
-              value={done}
-              onChange={handleDoneChange}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="true">Done</MenuItem>
-              <MenuItem value="false">Undone</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-        <Box sx={{ minWidth: 120, display: "flex", gap: 1 }}>
-          <Button
-            variant="contained"
-            fullWidth
-            sx={{ height: "50px" }}
-            onClick={handleSearch}
+        <TextField
+          label="Task Name"
+          value={filters.name || ""}
+          onChange={handleNameChange}
+          sx={{ minWidth: 600 }}
+        />
+        <FormControl sx={{ minWidth: 140 }}>
+          <InputLabel>Priority</InputLabel>
+          <Select
+            value={filters.priority?.toString() || ""}
+            onChange={handlePriorityChange}
           >
-            <strong>Search</strong>
-          </Button>
-          <Button
-            variant="outlined"
-            fullWidth
-            sx={{ height: "50px" }}
-            onClick={handleClear}
+            <MenuItem value="">All</MenuItem>
+            <MenuItem value="0">Low</MenuItem>
+            <MenuItem value="1">Medium</MenuItem>
+            <MenuItem value="2">High</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl sx={{ minWidth: 140 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={filters.done?.toString() || ""}
+            onChange={handleDoneChange}
           >
-            <strong>Clear</strong>
-          </Button>
-        </Box>
-      </Container>
-    </>
+            <MenuItem value="">All</MenuItem>
+            <MenuItem value="true">Done</MenuItem>
+            <MenuItem value="false">Undone</MenuItem>
+          </Select>
+        </FormControl>
+        <Button
+          sx={{ minWidth: 120 }}
+          variant="contained"
+          onClick={handleClear}
+        >
+          Clear Search
+        </Button>
+      </Box>
+    </Box>
   );
 };
 

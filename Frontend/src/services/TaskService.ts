@@ -12,26 +12,33 @@ const convertTaskDatesToISO = (task: { dueDate?: string | null }) => ({
   dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
 });
 
-// Fetches tasks from the server
+// Fetches tasks from the server with sorting, filtering, and pagination
 export const getTasks = async (
-  sortBy?: string[],
-  sortOrder?: string[],
+  sortBy?: string,
   page: number = 1,
   done?: boolean,
   name?: string,
   priority?: number
 ): Promise<{ tasks: Task[], currentPage: number, totalPages: number }> => {
-  const params: any = { page, done, name, priority };
+  const params: any = { page };
 
-  if (sortBy && sortBy.length > 0) {
-    params.sortBy = sortBy[0]; // Send the first value of sortBy as a string
+  if (sortBy) {
+    params.sortBy = sortBy;
+  }
+  if (done !== undefined) {
+    params.done = done;
+  }
+  if (name) {
+    params.name = name;
+  }
+  if (priority !== undefined && !isNaN(priority)) {
+    params.priority = priority;
   }
 
-  if (sortOrder && sortOrder.length > 0) {
-    params.sortOrder = sortOrder[0]; // Send the first value of sortOrder as a string
-  }
+  console.log("GET /todos with params:", params);
 
   const response = await axiosInstance.get('/todos', { params });
+  console.log("response:", response);
   return response.data;
 };
 

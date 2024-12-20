@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Task } from "../models/Task";
-import { createTask, updateTask } from "../services/TaskService";
-import { TextField, Select, MenuItem, Button, Box } from "@mui/material";
+import {
+  TextField,
+  Select,
+  MenuItem,
+  Button,
+  Box,
+  Typography,
+} from "@mui/material";
+import { useTasks } from "../hooks/useTasks";
+import { TaskInput } from "../context/TaskContext"; // Import TaskInput type
 
 // Defining the props for TaskForm component
 interface TaskFormProps {
@@ -11,10 +19,12 @@ interface TaskFormProps {
 
 // Defining the TaskForm component
 const TaskForm: React.FC<TaskFormProps> = ({ task, onTaskSaved }) => {
-  // State to manage task name, priority, and due date
-  const [name, setName] = useState(task?.name || "");
-  const [priority, setPriority] = useState<0 | 1 | 2>(task?.priority ?? 0);
-  const [dueDate, setDueDate] = useState(task?.dueDate || "");
+  const { createTask, updateTask } = useTasks(); // Using the custom hook to access task context
+  const [name, setName] = useState(task?.name || ""); // State to manage task name
+  const [priority, setPriority] = useState<0 | 1 | 2>(task?.priority ?? 0); // State to manage task priority
+  const [dueDate, setDueDate] = useState(task?.dueDate || ""); // State to manage task due date
+  const [loading, setLoading] = useState(false); // State to manage loading
+  const [error, setError] = useState<string | null>(null); // State to manage errors
 
   // Effect to update state when the task prop changes
   useEffect(() => {
@@ -32,112 +42,80 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onTaskSaved }) => {
     return selectedDate < now;
   };
 
-  // Function to get a future date by adding minutes to the current time
-  const getFutureDate = (minutes: number): string => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() + minutes);
-    return now.toISOString().slice(0, 16); // Format 'YYYY-MM-DDTHH:MM'
-  };
-
   // Function to handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    let formattedDueDate = dueDate ? new Date(dueDate).toISOString() : null;
+    setLoading(true);
+    setError(null);
 
-    if (dueDate === new Date().toISOString().slice(0, 10)) {
-      formattedDueDate = getFutureDate(5);
-    }
+    const taskInput: TaskInput = { name, priority, dueDate };
 
-    if (formattedDueDate && isDateInPast(formattedDueDate)) {
-      alert("Due date cannot be in the past");
-      return;
+    try {
+      if (task) {
+        await updateTask(task.id, taskInput);
+      } else {
+        await createTask(taskInput);
+      }
+      onTaskSaved();
+    } catch (err) {
+      setError("Failed to save task");
+    } finally {
+      setLoading(false);
     }
-
-    if (task) {
-      await updateTask(task.id, { name, priority, dueDate: formattedDueDate });
-    } else {
-      await createTask({ name, priority, dueDate: formattedDueDate });
-    }
-    onTaskSaved();
   };
 
   return (
     <Box
       component="form"
       onSubmit={handleSubmit}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-        backgroundColor: "#333",
-        padding: 2,
-        borderRadius: 2,
-        color: "white",
-        maxWidth: "600px",
-        margin: "auto",
-      }}
+      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
     >
+      {/* Task Name Input */}
       <TextField
-        type="text"
+        label="Task Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Task Name"
         required
-        variant="outlined"
-        sx={{
-          input: { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "#555" },
-            "&:hover fieldset": { borderColor: "#777" },
-            "&.Mui-focused fieldset": { borderColor: "#007BFF" },
-          },
-          backgroundColor: "#444",
-        }}
       />
+      {/* Priority Select */}
       <Select
+        label="Priority"
         value={priority}
-        onChange={(e) => setPriority(Number(e.target.value) as 0 | 1 | 2)}
-        variant="outlined"
-        sx={{
-          color: "white",
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "#555" },
-            "&:hover fieldset": { borderColor: "#777" },
-            "&.Mui-focused fieldset": { borderColor: "#007BFF" },
-          },
-          backgroundColor: "#444",
-        }}
+        onChange={(e) => setPriority(e.target.value as 0 | 1 | 2)}
+        required
       >
         <MenuItem value={0}>Low</MenuItem>
         <MenuItem value={1}>Medium</MenuItem>
         <MenuItem value={2}>High</MenuItem>
       </Select>
+      {/* Due Date Input */}
+
       <TextField
+        label="Due Date"
         type="date"
         value={dueDate}
         onChange={(e) => setDueDate(e.target.value)}
-        variant="outlined"
-        sx={{
-          input: { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "#555" },
-            "&:hover fieldset": { borderColor: "#777" },
-            "&.Mui-focused fieldset": { borderColor: "#007BFF" },
-          },
-          backgroundColor: "#444",
+        InputProps={{
+          inputProps: { min: new Date().toISOString().split("T")[0] }, // Prevent selecting past dates
         }}
+        error={!!dueDate && isDateInPast(dueDate)} // Show error if due date is in the past
+        helperText={
+          dueDate && isDateInPast(dueDate)
+            ? "Due date cannot be in the past"
+            : ""
+        }
       />
+      {/* Submit Button */}
       <Button
         type="submit"
         variant="contained"
-        sx={{
-          backgroundColor: "#007BFF",
-          color: "white",
-          "&:hover": { backgroundColor: "#0056b3" },
-        }}
+        color="primary"
+        disabled={loading || (dueDate ? isDateInPast(dueDate) : false)} // Disable button if loading or due date is in the past
       >
-        {task ? "Update Task" : "Create Task"}
+        {loading ? "Saving..." : task ? "Update Task" : "Create Task"}
       </Button>
+      {/* Error Message */}
+      {error && <Typography color="error">{error}</Typography>}
     </Box>
   );
 };

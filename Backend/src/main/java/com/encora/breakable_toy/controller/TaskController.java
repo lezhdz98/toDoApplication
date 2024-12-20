@@ -30,14 +30,13 @@ public class TaskController {
     @GetMapping("/todos")
     public ResponseEntity<Map<String, Object>> getAllTasks(
             @RequestParam(required = false) String sortBy,
-            @RequestParam(required = false) String sortOrder,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(required = false) Boolean done,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer priority) {
         try {
             // Call the service to get tasks
-            Map<String, Object> response = taskService.getAllTasks(sortBy, sortOrder, page, done, name, priority);
+            Map<String, Object> response = taskService.getAllTasks(sortBy, page, done, name, priority);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             // Return a bad request response if there is an error
